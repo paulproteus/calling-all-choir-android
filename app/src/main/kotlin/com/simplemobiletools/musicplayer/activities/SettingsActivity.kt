@@ -7,6 +7,8 @@ import com.simplemobiletools.commons.extensions.updateTextColors
 import com.simplemobiletools.commons.models.RadioItem
 import com.simplemobiletools.musicplayer.R
 import com.simplemobiletools.musicplayer.extensions.config
+import com.simplemobiletools.musicplayer.extensions.sendIntent
+import com.simplemobiletools.musicplayer.helpers.FORCE_REFRESH
 import com.simplemobiletools.musicplayer.services.MusicService
 import kotlinx.android.synthetic.main.activity_settings.*
 
@@ -23,6 +25,7 @@ class SettingsActivity : SimpleActivity() {
         setupManagePlaylists()
         setupEqualizer()
         setupDevelopment()
+        setupForceRefresh()
         updateTextColors(settings_scrollview)
     }
 
@@ -52,6 +55,12 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
+
+     private fun setupForceRefresh() {
+        settings_force_refresh_holder.setOnClickListener {
+            sendIntent(FORCE_REFRESH)
+        }
+    }
 
     private fun setupEqualizer() {
         val equalizer = MusicService.mEqualizer ?: return
