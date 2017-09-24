@@ -232,10 +232,6 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
         song_artist.text = song?.artist ?: ""
         progressbar.max = song?.duration ?: 0
         progressbar.progress = 0
-
-        if (mSongs.isEmpty()) {
-            toast(R.string.empty_playlist)
-        }
     }
 
     private fun fillSongsListView(songs: ArrayList<Song>) {
