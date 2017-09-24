@@ -22,6 +22,7 @@ class SettingsActivity : SimpleActivity() {
         setupCustomizeColors()
         setupManagePlaylists()
         setupEqualizer()
+        setupDevelopment()
         updateTextColors(settings_scrollview)
     }
 
@@ -36,6 +37,21 @@ class SettingsActivity : SimpleActivity() {
             startActivity(Intent(this, PlaylistsActivity::class.java))
         }
     }
+
+    private fun setupDevelopment() {
+        val items = arrayListOf(
+            RadioItem(0, "No"),
+            RadioItem(1, "Yes")
+        )
+        settings_development.text = items[config.development].title
+        settings_development_holder.setOnClickListener {
+            RadioGroupDialog(this@SettingsActivity, items, config.development) {
+                config.development = it as Int
+                settings_development.text = items[it].title
+            }
+        }
+    }
+
 
     private fun setupEqualizer() {
         val equalizer = MusicService.mEqualizer ?: return

@@ -20,6 +20,10 @@ class Config(context: Context) : BaseConfig(context) {
         get() = prefs.getInt(EQUALIZER, 0)
         set(equalizer) = prefs.edit().putInt(EQUALIZER, equalizer).apply()
 
+    var development: Int
+        get() = prefs.getInt(DEVELOPMENT, 0)
+        set(equalizer) = prefs.edit().putInt(DEVELOPMENT, equalizer).apply()
+
     var wasInitialPlaylistFilled: Boolean
         get() = prefs.getBoolean(WAS_INITIAL_PLAYLIST_FILLED, false)
         set(wasInitialPlaylistFilled) = prefs.edit().putBoolean(WAS_INITIAL_PLAYLIST_FILLED, wasInitialPlaylistFilled).apply()

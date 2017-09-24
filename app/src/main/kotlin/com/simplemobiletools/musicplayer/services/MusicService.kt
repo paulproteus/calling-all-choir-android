@@ -178,7 +178,13 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         setupEqualizer()
     }
 
-    private fun fillInitialPlaylist() {
+    private fun createInitialPlaylists() {
+        // This method creates a playlist for each Soprano 1/Alto 2/etc voice part.
+        // It assumes that's what this choir has. Future `
+        // This method downloads the JSON file from the Internet, creates the playlists
+        // by name, but adds no files to them. Each playlist has a separate button that
+        // the user will have to click to download the actual audio data.
+
         val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
         val columns = arrayOf(MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA)
 
@@ -205,7 +211,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
     private fun getSortedSongs() {
         if (!config.wasInitialPlaylistFilled) {
-            fillInitialPlaylist()
+            createInitialPlaylists()
             config.wasInitialPlaylistFilled = true
         }
 

@@ -25,6 +25,7 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
     private val TABLE_NAME_SONGS = "songs"
     private val COL_PATH = "path"
     private val COL_PLAYLIST_ID = "playlist_id"
+    private val COL_PLAYLIST_DOWNLOADED = "playlist_downloaded";
 
     private val mDb: SQLiteDatabase = writableDatabase
 
