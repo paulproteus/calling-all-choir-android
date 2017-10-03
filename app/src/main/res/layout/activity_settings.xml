@@ -129,14 +129,11 @@
             android:paddingRight="@dimen/activity_margin"
             android:paddingTop="@dimen/bigger_margin">
 
-
             <com.simplemobiletools.commons.views.MyTextView
                 android:id="@+id/settings_force_refresh_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_centerVertical="true"
-                android:layout_toLeftOf="@+id/settings_development"
-                android:layout_toStartOf="@+id/settings_development"
                 android:paddingLeft="@dimen/medium_margin"
                 android:paddingRight="@dimen/medium_margin"
                 android:text="Development: Force refresh of choir data"/>
