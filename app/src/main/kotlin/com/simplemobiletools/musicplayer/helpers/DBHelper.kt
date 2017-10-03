@@ -99,6 +99,11 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
 
     fun addSongsToPlaylist(paths: ArrayList<String>) {
         val playlistId = context.config.currentPlaylist
+        return addSongsToSpecificPlaylist(paths, playlistId)
+    }
+
+    fun addSongsToSpecificPlaylist(paths: ArrayList<String>, playlistId: Int) {
+        android.util.Log.e("OK HI THERE", "Adding stuff to playlist, ${paths} to ${playlistId}")
         for (path in paths) {
             ContentValues().apply {
                 put(COL_PATH, path)
@@ -194,6 +199,7 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
                     if (File(path).exists()) {
                         paths.add(path)
                     } else {
+                        android.util.Log.e("OMG???", "REMOVING ${path}")
                         removeSongFromPlaylist(path, -1)
                     }
                 } while (cursor.moveToNext())

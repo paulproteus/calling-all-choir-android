@@ -22,15 +22,21 @@ import com.github.kittinunf.fuel.Fuel
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.simplemobiletools.commons.dialogs.RadioGroupDialog
 import com.simplemobiletools.commons.extensions.getIntValue
 import com.simplemobiletools.commons.extensions.getStringValue
 import com.simplemobiletools.commons.extensions.hasWriteStoragePermission
+import com.simplemobiletools.commons.models.RadioItem
 import com.simplemobiletools.musicplayer.R
 import com.simplemobiletools.musicplayer.activities.MainActivity
+import com.simplemobiletools.musicplayer.dialogs.NewPlaylistDialog
 import com.simplemobiletools.musicplayer.extensions.config
 import com.simplemobiletools.musicplayer.extensions.dbHelper
+import com.simplemobiletools.musicplayer.extensions.playlistChanged
+import com.simplemobiletools.musicplayer.extensions.sendIntent
 import com.simplemobiletools.musicplayer.helpers.*
 import com.simplemobiletools.musicplayer.models.Events
+import com.simplemobiletools.musicplayer.models.Playlist
 import com.simplemobiletools.musicplayer.models.Song
 import com.simplemobiletools.musicplayer.receivers.ControlActionsListener
 import com.simplemobiletools.musicplayer.receivers.HeadsetPlugReceiver
@@ -178,7 +184,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                     mBus!!.post(Events.PlaylistUpdated(mSongs!!))
                 }
                 FORCE_REFRESH -> {
-                    downloadMusic()
+                    mBus!!.post(Events.DownloadRequested())
                 }
                 SET_PROGRESS -> {
                     if (mPlayer != null) {
@@ -244,59 +250,6 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         }
 
         dbHelper.addSongsToPlaylist(paths)
-    }
-
-    private fun handleChoirDataResponse(cdr: ChoirDataResponse) {
-        // uses internal storage i.e. app file path; cleared every time we handle a choir data response
-        val cachedir = getFileStreamPath("cachedir")
-        if (cachedir.exists()) {
-            cachedir.deleteRecursively()
-        }
-        cachedir.mkdir()
-        val seasondir = File(cachedir, cdr.foldername)
-        if (!seasondir.exists()) {
-            seasondir.mkdir()
-        }
-
-        for (song in cdr.songs) {
-            handleChoirSong(song, seasondir)
-        }
-    }
-
-    private fun handleChoirSong(song: ChoirSong, basepath: File) {
-        Log.e(TAG, "OK I'm downloading ${song.url} I guess")
-        val destination = File(basepath, song.filename)
-        destination.createNewFile()
-        Fuel.download(song.url)
-                .destination { response, url ->
-                    destination
-                }
-                .progress { readBytes, totalBytes ->
-                    if (readBytes == totalBytes) {
-                        Log.e(TAG, "OK I'm done downloading for real I guess wow")
-                    } else {
-                        Log.e(TAG, "Chugging along ${readBytes} of ${totalBytes}")
-                    }
-                }
-                .response { request, response, result ->
-                    Log.e(TAG, "OMG result is $result")
-                }
-
-        Log.e(TAG, "OK I'm done downloading I guess")
-    }
-
-    private fun downloadMusic() {
-        val hardcodedUrl = "https://paulproteus.github.io/sample-choir-data/data.json";
-        // Get the JSON metadata first.
-        Fuel.get(hardcodedUrl).
-                responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
-                    result.fold(success = { response ->
-                        Log.e(TAG, "OK I got a response $response")
-                        handleChoirDataResponse(response)
-                    }, failure = { error ->
-                        Log.e(TAG, "Well darn it, an error occurred ${error}")
-                    })
-               }
     }
 
     private fun getSortedSongs() {

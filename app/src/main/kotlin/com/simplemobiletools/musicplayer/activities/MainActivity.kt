@@ -10,9 +10,11 @@ import android.os.Environment
 import android.support.v4.app.ActivityCompat
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.SeekBar
+import com.github.kittinunf.fuel.Fuel
 import com.simplemobiletools.commons.dialogs.FilePickerDialog
 import com.simplemobiletools.commons.dialogs.RadioGroupDialog
 import com.simplemobiletools.commons.extensions.*
@@ -34,7 +36,10 @@ import com.simplemobiletools.musicplayer.extensions.playlistChanged
 import com.simplemobiletools.musicplayer.extensions.sendIntent
 import com.simplemobiletools.musicplayer.helpers.*
 import com.simplemobiletools.musicplayer.models.Events
+import com.simplemobiletools.musicplayer.models.Playlist
 import com.simplemobiletools.musicplayer.models.Song
+import com.simplemobiletools.musicplayer.services.ChoirDataResponse
+import com.simplemobiletools.musicplayer.services.ChoirSong
 import com.simplemobiletools.musicplayer.services.MusicService
 import com.squareup.otto.Bus
 import com.squareup.otto.Subscribe
@@ -48,6 +53,7 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
 
         lateinit var mBus: Bus
         private var mSongs: ArrayList<Song> = ArrayList()
+        private val TAG = MainActivity::class.java.simpleName
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -283,6 +289,113 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     @Subscribe
     fun progressUpdated(event: Events.ProgressUpdated) {
         progressbar.progress = event.progress
+    }
+
+    private fun handleChoirDataResponse(cdr: ChoirDataResponse) {
+        // uses internal storage i.e. app file path; cleared every time we handle a choir data response
+        val cachedir = File(Environment.getExternalStorageDirectory(), "cachedir")
+        if (cachedir.exists()) {
+            cachedir.deleteRecursively()
+        }
+        cachedir.mkdir()
+        val seasondir = File(cachedir, cdr.foldername)
+        if (!seasondir.exists()) {
+            seasondir.mkdir()
+        }
+
+        // Get a list of current playlists, so we can delete them all.
+        val playlistIds = ArrayList<Int>()
+        dbHelper.getPlaylists {
+            for (playlist in it) {
+                playlistIds.add(playlist.id)
+            }
+        }
+
+        // Delete them all :)
+        dbHelper.removePlaylists(playlistIds)
+
+        // Create the ones listed in cdr.parts, caching the result in a HashMap.
+        val playlistIdByName = HashMap<String, Int>()
+        for (part in cdr.parts) {
+            val insertedId = dbHelper.insertPlaylist(Playlist(0, part))
+            playlistIdByName.set(part, insertedId)
+        }
+
+        for (song in cdr.songs) {
+            val playlistId = playlistIdByName.get(song.part)
+            if (playlistId == null) {
+                Log.e(TAG, "Weird, the playlist ID for ${song.part} was null. Skipping the song: ${song}")
+                continue
+            } else {
+                // look up the right playlist ID
+                handleChoirSong(song, seasondir, playlistId)
+            }
+        }
+    }
+
+    private fun handleChoirSong(song: ChoirSong, basepath: File, playlistId: Int) {
+        Log.e(TAG, "OK I'm downloading ${song.url} I guess")
+        val destination = File(basepath, song.filename)
+        destination.createNewFile()
+        Fuel.download(song.url)
+                .destination { response, url ->
+                    destination
+                }
+                .progress { readBytes, totalBytes ->
+                    if (readBytes == totalBytes) {
+                        Log.e(TAG, "OK I'm done downloading for real I guess wow")
+                        // Once a song is downloaded, it exists at a file path, specifically "destination."
+                        // We should create a "Song" that points at this filename.
+                        Log.e(TAG, "okay path got I guess ${destination.absolutePath}")
+                        runOnUiThread {
+                            dbHelper.addSongsToSpecificPlaylist(ArrayList<String>().apply { add(destination.absolutePath) }, playlistId)
+                        }
+                        android.util.Log.e(TAG, "OK I just added ${destination.absolutePath} to ${playlistId}")
+                        sendIntent(REFRESH_LIST)
+
+                        val songs = dbHelper.getSongs()
+                        Log.e(TAG, "OK I guess here are the songs ${songs}")
+                    } else {
+                        // Log.e(TAG, "Chugging along ${readBytes} of ${totalBytes}")
+                    }
+                }
+                .response { request, response, result ->
+                    result.fold(
+                            { d ->
+                                Log.e(TAG, "OMG result is success $result")
+                                // Once a song is downloaded, it exists at a file path, specifically "destination."
+                                // We should create a "Song" that points at this filename.
+                                runOnUiThread {
+                                    dbHelper.addSongsToSpecificPlaylist(ArrayList<String>().apply { add(destination.absolutePath) }, playlistId)
+                                }
+                                Log.e(TAG, "OK I just added ${destination.absolutePath} to ${playlistId}")
+                                sendIntent(REFRESH_LIST)
+
+                            }, { err ->
+                            Log.e(TAG, "OMG result is error ${err}")
+                    })
+                }
+
+        Log.e(TAG, "OK I'm done downloading I guess")
+    }
+
+    private fun downloadMusic() {
+        val hardcodedUrl = "https://paulproteus.github.io/sample-choir-data/data.json";
+        // Get the JSON metadata first.
+        Fuel.get(hardcodedUrl).
+                responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
+                    result.fold(success = { response ->
+                        Log.e(TAG, "OK I got a response $response")
+                        handleChoirDataResponse(response)
+                    }, failure = { error ->
+                        Log.e(TAG, "Well darn it, an error occurred ${error}")
+                    })
+                }
+    }
+
+    @Subscribe
+    fun doDownloadMusic(event: Events.DownloadRequested) {
+        downloadMusic()
     }
 
     @Subscribe
