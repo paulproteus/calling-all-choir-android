@@ -18,6 +18,10 @@ import android.support.v7.app.NotificationCompat
 import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
+import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.ResponseDeserializable
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.simplemobiletools.commons.extensions.getIntValue
 import com.simplemobiletools.commons.extensions.getStringValue
 import com.simplemobiletools.commons.extensions.hasWriteStoragePermission
@@ -35,7 +39,37 @@ import com.simplemobiletools.musicplayer.receivers.RemoteControlReceiver
 import com.squareup.otto.Bus
 import java.io.File
 import java.io.IOException
+import java.io.Reader
 import java.util.*
+
+data class ChoirDataResponse(
+        val foldername: String,
+        val parts: List<String>,
+        val songs: List<ChoirSong>
+){
+    class Deserializer : ResponseDeserializable<ChoirDataResponse> {
+        override fun deserialize(reader: Reader) = Gson().fromJson(
+                reader, ChoirDataResponse::class.java
+        )
+    }
+}
+
+data class ChoirSong (
+        val filename: String,
+        val url: String,
+        val part: String
+) {
+    class Deserializer: ResponseDeserializable<ChoirSong> {
+        override fun deserialize(reader: Reader) = Gson().fromJson(reader, ChoirSong::class.java)
+    }
+    class ListDeserializer : ResponseDeserializable<List<ChoirSong>> {
+        override fun deserialize(reader: Reader): List<ChoirSong> {
+            val type = object : TypeToken<List<ChoirSong>>() {}.type
+            return Gson().fromJson(reader, type)
+        }
+    }
+
+}
 
 class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
     companion object {
@@ -143,6 +177,9 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                     getSortedSongs()
                     mBus!!.post(Events.PlaylistUpdated(mSongs!!))
                 }
+                FORCE_REFRESH -> {
+                    downloadMusic()
+                }
                 SET_PROGRESS -> {
                     if (mPlayer != null) {
                         val progress = intent.getIntExtra(PROGRESS, mPlayer!!.currentPosition / 1000)
@@ -207,6 +244,59 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         }
 
         dbHelper.addSongsToPlaylist(paths)
+    }
+
+    private fun handleChoirDataResponse(cdr: ChoirDataResponse) {
+        // uses internal storage i.e. app file path; cleared every time we handle a choir data response
+        val cachedir = getFileStreamPath("cachedir")
+        if (cachedir.exists()) {
+            cachedir.deleteRecursively()
+        }
+        cachedir.mkdir()
+        val seasondir = File(cachedir, cdr.foldername)
+        if (!seasondir.exists()) {
+            seasondir.mkdir()
+        }
+
+        for (song in cdr.songs) {
+            handleChoirSong(song, seasondir)
+        }
+    }
+
+    private fun handleChoirSong(song: ChoirSong, basepath: File) {
+        Log.e(TAG, "OK I'm downloading ${song.url} I guess")
+        val destination = File(basepath, song.filename)
+        destination.createNewFile()
+        Fuel.download(song.url)
+                .destination { response, url ->
+                    destination
+                }
+                .progress { readBytes, totalBytes ->
+                    if (readBytes == totalBytes) {
+                        Log.e(TAG, "OK I'm done downloading for real I guess wow")
+                    } else {
+                        Log.e(TAG, "Chugging along ${readBytes} of ${totalBytes}")
+                    }
+                }
+                .response { request, response, result ->
+                    Log.e(TAG, "OMG result is $result")
+                }
+
+        Log.e(TAG, "OK I'm done downloading I guess")
+    }
+
+    private fun downloadMusic() {
+        val hardcodedUrl = "https://paulproteus.github.io/sample-choir-data/data.json";
+        // Get the JSON metadata first.
+        Fuel.get(hardcodedUrl).
+                responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
+                    result.fold(success = { response ->
+                        Log.e(TAG, "OK I got a response $response")
+                        handleChoirDataResponse(response)
+                    }, failure = { error ->
+                        Log.e(TAG, "Well darn it, an error occurred ${error}")
+                    })
+               }
     }
 
     private fun getSortedSongs() {
