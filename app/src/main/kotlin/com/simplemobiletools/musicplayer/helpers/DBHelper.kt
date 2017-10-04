@@ -5,8 +5,10 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.Environment
 import android.provider.MediaStore
 import android.text.TextUtils
+import android.util.Log
 import com.simplemobiletools.commons.extensions.getIntValue
 import com.simplemobiletools.commons.extensions.getLongValue
 import com.simplemobiletools.commons.extensions.getStringValue
@@ -99,11 +101,17 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
 
     fun addSongsToPlaylist(paths: ArrayList<String>) {
         val playlistId = context.config.currentPlaylist
+        addSongsToSpecificPlaylist(paths, playlistId)
+    }
+
+    fun addSongsToSpecificPlaylist(paths: ArrayList<String>, playlistId: Int) {
         for (path in paths) {
             ContentValues().apply {
                 put(COL_PATH, path)
                 put(COL_PLAYLIST_ID, playlistId)
-                mDb.insert(TABLE_NAME_SONGS, null, this)
+                val insertResult = mDb.insert(TABLE_NAME_SONGS, null, this)
+                Log.e("OMG INSERT", "INSERT RESULT ${insertResult} is that OK?")
+                Log.e("OMG INSERT", "BTW ${path} and ${playlistId}")
             }
         }
     }
@@ -191,8 +199,10 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
             if (cursor?.moveToFirst() == true) {
                 do {
                     val path = cursor.getStringValue(COL_PATH)
+                    Log.e("OMG PATHS", "${path} was the path, does it exist? we'll see")
                     if (File(path).exists()) {
                         paths.add(path)
+                        Log.e("OMG PATHS", "wow yes it does, huh")
                     } else {
                         removeSongFromPlaylist(path, -1)
                     }
@@ -201,6 +211,7 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
         } finally {
             cursor?.close()
         }
+        Log.e("OMG PATHS", "about to return paths ${paths}")
         return paths
     }
 
@@ -208,35 +219,25 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
         val SPLICE_SIZE = 200
         val paths = getPlaylistSongPaths(context.config.currentPlaylist)
         val songs = ArrayList<Song>(paths.size)
-        if (paths.isEmpty())
+        if (paths.isEmpty()) {
+            Log.e("getSongs", "in the early return, weird")
             return songs
+        }
 
         for (i in 0..paths.size - 1 step SPLICE_SIZE) {
             val curPaths = paths.subList(i, Math.min(i + SPLICE_SIZE, paths.size))
-            val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            Log.e("HMM", "curPaths: ${curPaths}")
+            val uri = android.net.Uri.fromFile(Environment.getDataDirectory())
             val columns = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA)
             val questionMarks = getQuestionMarks(curPaths.size)
             val selection = "${MediaStore.Audio.Media.DATA} IN ($questionMarks)"
             val selectionArgs = curPaths.toTypedArray()
 
-            var cursor: Cursor? = null
-            try {
-                cursor = context.contentResolver.query(uri, columns, selection, selectionArgs, null)
-                if (cursor != null && cursor.moveToFirst()) {
-                    do {
-                        val id = cursor.getLongValue(MediaStore.Audio.Media._ID)
-                        val title = cursor.getStringValue(MediaStore.Audio.Media.TITLE)
-                        val artist = cursor.getStringValue(MediaStore.Audio.Media.ARTIST)
-                        val path = cursor.getStringValue(MediaStore.Audio.Media.DATA)
-                        val duration = cursor.getIntValue(MediaStore.Audio.Media.DURATION) / 1000
-                        val song = Song(id, title, artist, path, duration)
-                        songs.add(song)
-                    } while (cursor.moveToNext())
-                }
-            } finally {
-                cursor?.close()
+            for (path in curPaths) {
+                songs.add(Song(0, "title", "artist", path, 2))
             }
         }
+        Log.e("HMM", "about to return ${songs}")
         return songs
     }
 
