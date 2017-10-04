@@ -11,6 +11,7 @@ import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.audiofx.Equalizer
+import android.os.Environment
 import android.os.Handler
 import android.os.PowerManager
 import android.provider.MediaStore
@@ -222,7 +223,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         // by name, but adds no files to them. Each playlist has a separate button that
         // the user will have to click to download the actual audio data.
 
-        val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        val uri = android.net.Uri.fromFile(Environment.getDataDirectory())
         val columns = arrayOf(MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA)
 
         var cursor: Cursor? = null
@@ -258,31 +259,36 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
             seasondir.mkdir()
         }
 
+        // Delete all playlists
+        mBus!!.post(Events.SetPlaylistList(cdr.parts))
+
         for (song in cdr.songs) {
             handleChoirSong(song, seasondir)
         }
     }
 
     private fun handleChoirSong(song: ChoirSong, basepath: File) {
-        Log.e(TAG, "OK I'm downloading ${song.url} I guess")
         val destination = File(basepath, song.filename)
-        destination.createNewFile()
+        fun onSuccess(destination: File, playlistName: String) {
+            Log.e(TAG, "Successfully downloaded file; passing it to MainActivity via SongDownloaded event.")
+             mBus!!.post(Events.SongDownloaded(destination, playlistName))
+        }
         Fuel.download(song.url)
                 .destination { response, url ->
                     destination
                 }
                 .progress { readBytes, totalBytes ->
                     if (readBytes == totalBytes) {
-                        Log.e(TAG, "OK I'm done downloading for real I guess wow")
-                    } else {
-                        Log.e(TAG, "Chugging along ${readBytes} of ${totalBytes}")
+                        Log.e(TAG, "Download progress completed. Allowing .response{} handler to call onSuccess().")
                     }
                 }
                 .response { request, response, result ->
-                    Log.e(TAG, "OMG result is $result")
+                    result.fold(success = { response ->
+                        onSuccess(destination, song.part)
+                    }, failure = { error ->
+                        Log.e(TAG, "During downloading, an error occurred ${error} :(")
+                    })
                 }
-
-        Log.e(TAG, "OK I'm done downloading I guess")
     }
 
     private fun downloadMusic() {
@@ -500,7 +506,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         mCurrSong = mSongs!![Math.min(songIndex, mSongs!!.size - 1)]
 
         try {
-            val trackUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mCurrSong!!.id)
+            val trackUri = android.net.Uri.fromFile(File(mCurrSong!!.path))
             mPlayer!!.setDataSource(applicationContext, trackUri)
             mPlayer!!.prepareAsync()
 

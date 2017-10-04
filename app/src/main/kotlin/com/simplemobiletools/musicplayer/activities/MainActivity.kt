@@ -10,6 +10,7 @@ import android.os.Environment
 import android.support.v4.app.ActivityCompat
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.SeekBar
@@ -34,6 +35,7 @@ import com.simplemobiletools.musicplayer.extensions.playlistChanged
 import com.simplemobiletools.musicplayer.extensions.sendIntent
 import com.simplemobiletools.musicplayer.helpers.*
 import com.simplemobiletools.musicplayer.models.Events
+import com.simplemobiletools.musicplayer.models.Playlist
 import com.simplemobiletools.musicplayer.models.Song
 import com.simplemobiletools.musicplayer.services.MusicService
 import com.squareup.otto.Bus
@@ -184,7 +186,7 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     }
 
     private fun addFolderToPlaylist() {
-        val initialPath = if (mSongs.isEmpty()) Environment.getExternalStorageDirectory().toString() else mSongs[0].path
+        val initialPath = if (mSongs.isEmpty()) Environment.getDataDirectory().toString() else mSongs[0].path
         FilePickerDialog(this, initialPath, pickFile = false) {
             val files = File(it).listFiles() ?: return@FilePickerDialog
             val paths = files.mapTo(ArrayList<String>()) { it.absolutePath }
@@ -194,7 +196,7 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     }
 
     private fun addFileToPlaylist() {
-        val initialPath = if (mSongs.isEmpty()) Environment.getExternalStorageDirectory().toString() else mSongs[0].path
+        val initialPath = if (mSongs.isEmpty()) Environment.getDataDirectory().toString() else mSongs[0].path
         FilePickerDialog(this, initialPath) {
             dbHelper.addSongToPlaylist(it)
             sendIntent(REFRESH_LIST)
@@ -262,6 +264,31 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     override fun onDestroy() {
         super.onDestroy()
         mBus.unregister(this)
+    }
+
+    @Subscribe
+    fun setPlaylistListEvent(event: Events.SetPlaylistList) {
+        // Get a list of current playlists, so we can delete them all.
+        val playlistIds = ArrayList<Int>()
+        dbHelper.getPlaylists {
+            for (playlist in it) {
+                playlistIds.add(playlist.id)
+            }
+        }
+
+        // Delete them all :)
+        dbHelper.removePlaylists(playlistIds)
+
+        // Add the new ones.
+        for (part in event.playlistNames) {
+            dbHelper.insertPlaylist(Playlist(0, part))
+        }
+    }
+
+    @Subscribe
+    fun songDownloadedEvent(event: Events.SongDownloaded) {
+        dbHelper.addSongsToSpecificPlaylist(ArrayList<String>().apply { add(event.path.absolutePath) },
+                dbHelper.getPlaylistIdWithTitle(event.playlistName))
     }
 
     @Subscribe
