@@ -85,7 +85,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         private var mSongs: ArrayList<Song>? = null
         private var mPlayer: MediaPlayer? = null
         private var mPlayedSongIndexes: ArrayList<Int>? = null
-        private var mBus: Bus? = null
+        private lateinit var mBus: Bus
         private var mConfig: Config? = null
         private var mProgressHandler: Handler? = null
         private var mPreviousIntent: PendingIntent? = null
