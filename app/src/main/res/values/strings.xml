@@ -1,7 +1,6 @@
 <resources>
     <string name="app_name">Choir Practice</string>
     <string name="app_launcher_name">Choir Practice</string>
-    <string name="playlist_empty">Your playlist is empty</string>
     <string name="rename_song">Rename song</string>
     <string name="rename_song_error">An error occurred during the renaming</string>
     <string name="rename_song_empty">Please fill in all fields</string>
@@ -23,7 +22,7 @@
     <string name="add_folder_to_playlist">Add folder to playlist</string>
     <string name="manage_playlists">Manage playlists</string>
     <string name="playlists">Playlists</string>
-    <string name="create_playlist">Create playlist</string>
+    <string name="create_playlist">Create your own</string>
     <string name="rename_playlist">Rename playlist</string>
     <string name="playlist_name_exists">A playlist with that name already exists</string>
     <string name="remove_playlist">Remove playlist</string>
@@ -32,8 +31,8 @@
     <string name="remove_from_playlist">Remove from playlist</string>
     <string name="remove_from_playlist_description">This will only remove the items from playlist \"%1$s\", the actual files will not be deleted.</string>
     <string name="delete_the_files_too">Delete the files too</string>
-    <string name="open_playlist">Open playlist</string>
-    <string name="initial_playlist">Initial playlist</string>
+    <string name="open_playlist">Select voice part</string>
+    <string name="initial_playlist">None selected</string>
     <string name="initial_playlist_cannot_be_deleted">The initial playlist cannot be deleted</string>
     <string name="empty_playlist">Current playlist is empty</string>
 
