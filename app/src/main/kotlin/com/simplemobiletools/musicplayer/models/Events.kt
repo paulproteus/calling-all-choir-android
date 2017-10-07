@@ -15,6 +15,4 @@ class Events {
     class PlaylistUpdated internal constructor(val songs: ArrayList<Song>)
 
     class ProgressUpdated internal constructor(val progress: Int)
-
-    class NoStoragePermission internal constructor()
 }

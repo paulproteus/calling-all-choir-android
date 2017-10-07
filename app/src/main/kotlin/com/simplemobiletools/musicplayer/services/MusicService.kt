@@ -25,7 +25,6 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.simplemobiletools.commons.extensions.getIntValue
 import com.simplemobiletools.commons.extensions.getStringValue
-import com.simplemobiletools.commons.extensions.hasWriteStoragePermission
 import com.simplemobiletools.musicplayer.R
 import com.simplemobiletools.musicplayer.activities.MainActivity
 import com.simplemobiletools.musicplayer.extensions.config
@@ -110,11 +109,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         val remoteControlComponent = ComponentName(packageName, RemoteControlReceiver::class.java.name)
         val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         audioManager.registerMediaButtonEventReceiver(remoteControlComponent)
-        if (hasWriteStoragePermission()) {
-            initService()
-        } else {
-            mBus!!.post(Events.NoStoragePermission())
-        }
+        initService()
     }
 
     private fun initService() {
@@ -138,10 +133,6 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if (!hasWriteStoragePermission()) {
-            return START_NOT_STICKY
-        }
-
         val action = intent.action
         if (action != null) {
             when (action) {
