@@ -5,10 +5,10 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import android.provider.MediaStore
+import android.media.MediaMetadataRetriever
 import android.text.TextUtils
+import android.util.Log
 import com.simplemobiletools.commons.extensions.getIntValue
-import com.simplemobiletools.commons.extensions.getLongValue
 import com.simplemobiletools.commons.extensions.getStringValue
 import com.simplemobiletools.musicplayer.R
 import com.simplemobiletools.musicplayer.extensions.config
@@ -25,7 +25,9 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
     private val TABLE_NAME_SONGS = "songs"
     private val COL_PATH = "path"
     private val COL_PLAYLIST_ID = "playlist_id"
-    private val COL_PLAYLIST_DOWNLOADED = "playlist_downloaded";
+
+    private val TAG = DBHelper::class.java.simpleName
+
 
     private val mDb: SQLiteDatabase = writableDatabase
 
@@ -99,6 +101,10 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
 
     fun addSongsToPlaylist(paths: ArrayList<String>) {
         val playlistId = context.config.currentPlaylist
+        addSongsToSpecificPlaylist(paths, playlistId)
+    }
+
+    fun addSongsToSpecificPlaylist(paths: ArrayList<String>, playlistId: Int) {
         for (path in paths) {
             ContentValues().apply {
                 put(COL_PATH, path)
@@ -194,6 +200,7 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
                     if (File(path).exists()) {
                         paths.add(path)
                     } else {
+                        Log.e(TAG, "Unexpected: File did not exist! removing ${path} from all playlists")
                         removeSongFromPlaylist(path, -1)
                     }
                 } while (cursor.moveToNext())
@@ -208,33 +215,21 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
         val SPLICE_SIZE = 200
         val paths = getPlaylistSongPaths(context.config.currentPlaylist)
         val songs = ArrayList<Song>(paths.size)
-        if (paths.isEmpty())
+        if (paths.isEmpty()) {
+            Log.e(TAG, "Unexpected: getSongs() returned early due to songs being empty.")
             return songs
+        }
 
         for (i in 0..paths.size - 1 step SPLICE_SIZE) {
             val curPaths = paths.subList(i, Math.min(i + SPLICE_SIZE, paths.size))
-            val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-            val columns = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA)
-            val questionMarks = getQuestionMarks(curPaths.size)
-            val selection = "${MediaStore.Audio.Media.DATA} IN ($questionMarks)"
-            val selectionArgs = curPaths.toTypedArray()
-
-            var cursor: Cursor? = null
-            try {
-                cursor = context.contentResolver.query(uri, columns, selection, selectionArgs, null)
-                if (cursor != null && cursor.moveToFirst()) {
-                    do {
-                        val id = cursor.getLongValue(MediaStore.Audio.Media._ID)
-                        val title = cursor.getStringValue(MediaStore.Audio.Media.TITLE)
-                        val artist = cursor.getStringValue(MediaStore.Audio.Media.ARTIST)
-                        val path = cursor.getStringValue(MediaStore.Audio.Media.DATA)
-                        val duration = cursor.getIntValue(MediaStore.Audio.Media.DURATION) / 1000
-                        val song = Song(id, title, artist, path, duration)
-                        songs.add(song)
-                    } while (cursor.moveToNext())
-                }
-            } finally {
-                cursor?.close()
+            for (path in curPaths) {
+                val metaRetriever = MediaMetadataRetriever()
+                metaRetriever.setDataSource(path)
+                val duration = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                val dur = java.lang.Integer.parseInt(duration) / 1000
+                val title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+                val artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                songs.add(Song(0, title, artist, path, dur))
             }
         }
         return songs

@@ -3,6 +3,7 @@ package com.simplemobiletools.musicplayer.dialogs
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Environment
 import android.provider.MediaStore
 import android.support.v7.app.AlertDialog
 import android.view.LayoutInflater
@@ -42,7 +43,7 @@ class EditDialog(val activity: SimpleActivity, val song: Song, val callback: (So
                     return@setOnClickListener
                 }
 
-                val uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                val uri = android.net.Uri.fromFile(Environment.getDataDirectory())
                 song.artist = newArtist
                 song.title = newTitle
 
