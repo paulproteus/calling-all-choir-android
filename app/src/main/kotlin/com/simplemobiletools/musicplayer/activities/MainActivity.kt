@@ -46,8 +46,6 @@ import java.util.*
 
 class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     companion object {
-        private val STORAGE_PERMISSION = 1
-
         lateinit var mBus: Bus
         private var mSongs: ArrayList<Song> = ArrayList()
     }
@@ -60,11 +58,7 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
         mBus.register(this)
         progressbar.setOnSeekBarChangeListener(this)
 
-        if (hasWriteStoragePermission()) {
-            initializePlayer()
-        } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), STORAGE_PERMISSION)
-        }
+        initializePlayer()
 
         previous_btn.setOnClickListener { sendIntent(PREVIOUS) }
         play_pause_btn.setOnClickListener { sendIntent(PLAYPAUSE) }
@@ -108,18 +102,6 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
             else -> return super.onOptionsItemSelected(item)
         }
         return true
-    }
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        if (requestCode == STORAGE_PERMISSION) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initializePlayer()
-            } else {
-                toast(R.string.no_permissions)
-            }
-        }
     }
 
     private fun launchSettings() {
@@ -310,11 +292,6 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     @Subscribe
     fun progressUpdated(event: Events.ProgressUpdated) {
         progressbar.progress = event.progress
-    }
-
-    @Subscribe
-    fun noStoragePermission(event: Events.NoStoragePermission) {
-        toast(R.string.no_permissions)
     }
 
     private fun setupRecyclerViewListener() {
