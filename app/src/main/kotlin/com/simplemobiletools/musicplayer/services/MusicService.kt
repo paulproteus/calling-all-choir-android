@@ -43,8 +43,6 @@ import java.io.Reader
 import java.util.*
 
 data class ChoirDataResponse(
-        val foldername: String,
-        val parts: List<String>,
         val songs: List<ChoirSong>
 ){
     class Deserializer : ResponseDeserializable<ChoirDataResponse> {
@@ -57,7 +55,7 @@ data class ChoirDataResponse(
 data class ChoirSong (
         val filename: String,
         val url: String,
-        val part: String
+        val parts: List<String>
 ) {
     class Deserializer: ResponseDeserializable<ChoirSong> {
         override fun deserialize(reader: Reader) = Gson().fromJson(reader, ChoirSong::class.java)
@@ -240,29 +238,39 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
     private fun handleChoirDataResponse(cdr: ChoirDataResponse) {
         // uses internal storage i.e. app file path; cleared every time we handle a choir data response
-        val cachedir = getFileStreamPath("cachedir")
+        val cachedir = getFileStreamPath("songcache")
         if (cachedir.exists()) {
             cachedir.deleteRecursively()
         }
         cachedir.mkdir()
-        val seasondir = File(cachedir, cdr.foldername)
-        if (!seasondir.exists()) {
-            seasondir.mkdir()
-        }
+
+        // Calculate list of playlists. I know this means looping twice. I think that's livable
+        // for now. It also relies on a silly hard-coded sorting trick to get the parts into
+        // Soprano, Alto, Tenor, Bass order.
+        val songSet = HashSet<String>()
+
+        cdr.songs.forEach({ song ->
+            song.parts.forEach({ part ->
+                songSet.add(part)
+            })
+        })
 
         // Delete all playlists
-        mBus!!.post(Events.SetPlaylistList(cdr.parts))
+        mBus!!.post(Events.SetPlaylistList(
+                songSet.sortedWith(compareBy({! it.startsWith("Soprano")}, { ! it.startsWith("Alto") }, { ! it.startsWith("Tenor") },{! it.startsWith("Bass")}, {it}))))
 
         for (song in cdr.songs) {
-            handleChoirSong(song, seasondir)
+            handleChoirSong(song, cachedir)
         }
     }
 
     private fun handleChoirSong(song: ChoirSong, basepath: File) {
         val destination = File(basepath, song.filename)
-        fun onSuccess(destination: File, playlistName: String) {
+        fun onSuccess(destination: File, playlistNames: Collection<String>) {
             Log.e(TAG, "Successfully downloaded file; passing it to MainActivity via SongDownloaded event.")
-             mBus!!.post(Events.SongDownloaded(destination, playlistName))
+            playlistNames.forEach {
+                mBus!!.post(Events.SongDownloaded(destination, it))
+            }
         }
         Fuel.download(song.url)
                 .destination { response, url ->
@@ -275,7 +283,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                 }
                 .response { request, response, result ->
                     result.fold(success = { response ->
-                        onSuccess(destination, song.part)
+                        onSuccess(destination, song.parts)
                     }, failure = { error ->
                         Log.e(TAG, "During downloading, an error occurred ${error} :(")
                     })
@@ -283,9 +291,14 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     private fun downloadMusic() {
-        val hardcodedUrl = "https://paulproteus.github.io/sample-choir-data/data.json";
+        val url = if (config.development == 1) {
+            "https://paulproteus.github.io/sample-choir-data/data.json";
+        } else {
+            "okay"
+        }
+
         // Get the JSON metadata first.
-        Fuel.get(hardcodedUrl).
+        Fuel.get(url).
                 responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
                     result.fold(success = { response ->
                         Log.e(TAG, "OK I got a response $response")
