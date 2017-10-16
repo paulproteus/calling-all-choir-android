@@ -12,6 +12,7 @@ android {
         targetSdkVersion 25
         versionCode 31
         versionName "31 - First Play Store relase of Calling All Choir app"
+        applicationIdSuffix ".org.asheesh.callingallchoir"
     }
 
     signingConfigs {
@@ -23,7 +24,6 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
-            applicationIdSuffix ".org.asheesh.callingallchoir"
         }
     }
 
