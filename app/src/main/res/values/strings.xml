@@ -38,6 +38,7 @@
 
     <!-- Settings -->
     <string name="equalizer">Equalizer</string>
+    <string name="set_password">Set the password</string>
 
     <!-- Strings displayed only on Google Playstore. Optional, but good to have -->
     <!-- Short description has to have less than 80 chars -->

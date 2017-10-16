@@ -131,6 +131,8 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
         } finally {
             cursor?.close()
         }
+        // re-order them in Choir order :)
+        playlists.sortWith(compareBy({! it.title.startsWith("Soprano")}, { ! it.title.startsWith("Alto") }, { ! it.title.startsWith("Tenor") },{! it.title.startsWith("Bass")}, {it.title}))
         callback(playlists)
     }
 
@@ -227,8 +229,8 @@ class DBHelper private constructor(val context: Context) : SQLiteOpenHelper(cont
                 metaRetriever.setDataSource(path)
                 val duration = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 val dur = java.lang.Integer.parseInt(duration) / 1000
-                val title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                val artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                val title = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE) ?: path
+                val artist = metaRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: ""
                 songs.add(Song(0, title, artist, path, dur))
             }
         }

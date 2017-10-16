@@ -20,6 +20,7 @@ import android.telephony.PhoneStateListener
 import android.telephony.TelephonyManager
 import android.util.Log
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.core.ResponseDeserializable
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -272,6 +273,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                 mBus!!.post(Events.SongDownloaded(destination, it))
             }
         }
+        FuelManager.instance.baseHeaders = mapOf("Authorization" to config.currentPassword)
         Fuel.download(song.url)
                 .destination { response, url ->
                     destination
@@ -294,10 +296,11 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         val url = if (config.development == 1) {
             "https://paulproteus.github.io/sample-choir-data/data.json";
         } else {
-            "okay"
+            "https://d3lci55r7d8wre.cloudfront.net/data.json"
         }
 
         // Get the JSON metadata first.
+        FuelManager.instance.baseHeaders = mapOf("Authorization" to config.currentPassword)
         Fuel.get(url).
                 responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
                     result.fold(success = { response ->

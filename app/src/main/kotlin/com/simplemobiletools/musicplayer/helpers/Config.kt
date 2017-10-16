@@ -35,4 +35,9 @@ class Config(context: Context) : BaseConfig(context) {
     var repeatSong: Boolean
         get() = prefs.getBoolean(REPEAT_SONG, false)
         set(repeat) = prefs.edit().putBoolean(REPEAT_SONG, repeat).apply()
+
+    var currentPassword: String
+        get() = prefs.getString(CURRENT_PASSWORD, "")
+        set(currentPassword) = prefs.edit().putString(CURRENT_PASSWORD, currentPassword).apply()
+
 }

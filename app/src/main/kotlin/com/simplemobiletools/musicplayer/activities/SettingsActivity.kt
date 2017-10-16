@@ -3,9 +3,11 @@ package com.simplemobiletools.musicplayer.activities
 import android.content.Intent
 import android.os.Bundle
 import com.simplemobiletools.commons.dialogs.RadioGroupDialog
+import com.simplemobiletools.commons.extensions.toast
 import com.simplemobiletools.commons.extensions.updateTextColors
 import com.simplemobiletools.commons.models.RadioItem
 import com.simplemobiletools.musicplayer.R
+import com.simplemobiletools.musicplayer.dialogs.PasswordEntryDialog
 import com.simplemobiletools.musicplayer.extensions.config
 import com.simplemobiletools.musicplayer.extensions.sendIntent
 import com.simplemobiletools.musicplayer.helpers.FORCE_REFRESH
@@ -26,6 +28,7 @@ class SettingsActivity : SimpleActivity() {
         setupEqualizer()
         setupDevelopment()
         setupForceRefresh()
+        setupStorePassword()
         updateTextColors(settings_scrollview)
     }
 
@@ -43,8 +46,8 @@ class SettingsActivity : SimpleActivity() {
 
     private fun setupDevelopment() {
         val items = arrayListOf(
-            RadioItem(0, "No"),
-            RadioItem(1, "Yes")
+                RadioItem(0, "No"),
+                RadioItem(1, "Yes")
         )
         settings_development.text = items[config.development].title
         settings_development_holder.setOnClickListener {
@@ -56,9 +59,25 @@ class SettingsActivity : SimpleActivity() {
     }
 
 
-     private fun setupForceRefresh() {
+    private fun setupForceRefresh() {
         settings_force_refresh_holder.setOnClickListener {
             sendIntent(FORCE_REFRESH)
+        }
+    }
+
+    private fun setupStorePassword() {
+        settings_store_password_holder.setOnClickListener {
+            val currentPassword = config.currentPassword
+            PasswordEntryDialog(this@SettingsActivity, currentPassword) {
+                val newPassword = it.toLowerCase().replace(" ", "")
+                if (it == "") {
+                    toast("OK! Using sample data.")
+                    config.development = 1
+                } else if (it != currentPassword) {
+                    config.currentPassword = newPassword
+                    toast("Saved password.")
+                }
+            }
         }
     }
 
