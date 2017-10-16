@@ -29,6 +29,7 @@ val DEVELOPMENT = "development"
 val REPEAT_SONG = "repeat_song"
 val CURRENT_PLAYLIST = "current_playlist"
 val WAS_INITIAL_PLAYLIST_FILLED = "was_initial_playlist_filled"
+val CURRENT_PASSWORD = "current_password"
 
 // sorting
 val SORT_BY_TITLE = 1
