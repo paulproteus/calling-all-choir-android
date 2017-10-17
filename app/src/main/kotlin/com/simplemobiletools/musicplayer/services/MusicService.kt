@@ -305,7 +305,10 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                 responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
                     result.fold(success = { response ->
                         Log.e(TAG, "OK I got a response $response")
-                        handleChoirDataResponse(response)
+                        if (response != null) {
+                            handleChoirDataResponse(response)
+                        }
+                        Log.e(TAG, "Unfortunately it was null! Probably you can find a darn-it message in the log.")
                     }, failure = { error ->
                         Log.e(TAG, "Well darn it, an error occurred ${error}")
                     })
