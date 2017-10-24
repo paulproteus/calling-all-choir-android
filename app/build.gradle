@@ -10,9 +10,9 @@ android {
         applicationId "com.simplemobiletools.musicplayer"
         minSdkVersion 16
         targetSdkVersion 25
-        versionCode 31
-        versionName "31 - First Play Store relase of Calling All Choir app"
-        applicationIdSuffix ".org.asheesh.callingallchoir"
+        versionCode 32
+        versionName "32"
+        applicationIdSuffix ".org.asheesh"
     }
 
     signingConfigs {
@@ -24,6 +24,7 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+            applicationIdSuffix ".callingalllchoir"
         }
     }
 
