@@ -1,9 +1,13 @@
 package com.simplemobiletools.musicplayer.services
 
+import android.app.DownloadManager
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
-import android.content.*
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -11,6 +15,7 @@ import android.media.AudioManager
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.audiofx.Equalizer
+import android.net.Uri
 import android.os.Environment
 import android.os.Handler
 import android.os.PowerManager
@@ -299,17 +304,18 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
             "https://d3lci55r7d8wre.cloudfront.net/data.json"
         }
 
-        // Get the JSON metadata first.
-        FuelManager.instance.baseHeaders = mapOf("Authorization" to config.currentPassword)
-        Fuel.get(url).
-                responseObject(ChoirDataResponse.Deserializer()) { request, _, result ->
-                    result.fold(success = { response ->
-                        Log.e(TAG, "OK I got a response $response")
-                        handleChoirDataResponse(response)
-                    }, failure = { error ->
-                        Log.e(TAG, "Well darn it, an error occurred ${error}")
-                    })
-               }
+
+        val request = DownloadManager.Request(Uri.parse(url))
+        request.setDestinationInExternalFilesDir(applicationContext, "choir-downloads", Uri.parse(url).path)
+        if (config.currentPassword.isNotEmpty()) {
+            request.addRequestHeader("Authorization", config.currentPassword)
+        }
+        request.setDescription("List of songs for choir")
+        request.setTitle("List of songs for choir")
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN)
+        (getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager)?.apply {
+            enqueue(request)
+        }
     }
 
     private fun getSortedSongs() {

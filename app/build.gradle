@@ -43,10 +43,11 @@ dependencies {
     compile 'com.github.kittinunf.fuel:fuel:1.10.0'
     compile 'com.github.kittinunf.fuel:fuel-android:1.10.0'
     compile 'com.github.kittinunf.fuel:fuel-gson:1.10.0'
+    compile 'com.github.salomonbrys.kotson:kotson:2.5.0'
 }
 
 buildscript {
-    ext.kotlin_version = '1.1.2-5'
+    ext.kotlin_version = '1.1.4'
     repositories {
         mavenCentral()
     }

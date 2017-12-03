@@ -1,13 +1,10 @@
 package com.simplemobiletools.musicplayer.activities
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.PorterDuff
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Environment
-import android.support.v4.app.ActivityCompat
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
@@ -42,7 +39,6 @@ import com.squareup.otto.Bus
 import com.squareup.otto.Subscribe
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
-import java.util.*
 
 class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
     companion object {
@@ -266,8 +262,18 @@ class MainActivity : SimpleActivity(), SeekBar.OnSeekBarChangeListener {
 
     @Subscribe
     fun songDownloadedEvent(event: Events.SongDownloaded) {
-        dbHelper.addSongsToSpecificPlaylist(ArrayList<String>().apply { add(event.path.absolutePath) },
-                dbHelper.getPlaylistIdWithTitle(event.playlistName))
+        // Copy the file somewhere useful - we do this here to avoid permissions confusion.
+        val lastPathComponent = event.path.absolutePath.split(Regex("/")).last()
+        val destination = File(applicationContext.getFileStreamPath("songcache"), lastPathComponent)
+        Log.e("songDownloadedEvent", "Copying to ${destination}...")
+        // Synchronous I/O for copyTo():
+        event.path.copyTo(destination, overwrite = true)
+        Log.e("songDownloadedEvent", "   copy complete.")
+
+        // Then add it to our playlist.
+        dbHelper.addSongsToSpecificPlaylist(
+            ArrayList<String>().apply { add(destination.absolutePath) },
+            dbHelper.getPlaylistIdWithTitle(event.playlistName))
     }
 
     @Subscribe
